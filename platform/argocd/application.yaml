@@ -11,9 +11,11 @@ spec:
     targetRevision: main
     path: platform/helm/trade-balance-llm
     helm:
+      # Only overrides what actually needs an environment-specific value
+      # (values.yaml's gateway.image.repository is a placeholder). Everything
+      # else, including vllm.replicaCount, is controlled by the chart's own
+      # values.yaml — one place to change it, not two.
       values: |
-        vllm:
-          replicaCount: 0
         gateway:
           image:
             repository: CHANGEME_REGION-docker.pkg.dev/CHANGEME_PROJECT/trade-balance-llm/gateway
@@ -26,8 +28,8 @@ spec:
     syncOptions: [CreateNamespace=true, PruneLast=true]
   revisionHistoryLimit: 5
   # No ignoreDifferences here on purpose: selfHeal stays fully authoritative.
-  # If ArgoCD is managing this Application, vllm's replica count must be
-  # changed by editing this file (or the Helm values it points at) and
+  # If ArgoCD is managing this Application, vllm's replica count is controlled
+  # by editing platform/helm/trade-balance-llm/values.yaml (vllm.replicaCount) and
   # pushing — not by kubectl scale. See runbook 14 for the two mutually
   # exclusive on/off paths (plain Helm + script vs GitOps).
 
