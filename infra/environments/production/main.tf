@@ -12,10 +12,10 @@ module "platform" {
   node_sa_account_id = "trade-balance-gke-nodes"
 
   enable_gpu_pool      = true
-  gpu_accelerator_type = "nvidia-tesla-t4"
-  gpu_machine_type     = "n1-standard-8"
+  gpu_accelerator_type = "nvidia-l4"
+  gpu_machine_type     = "g2-standard-8"
   gpu_spot             = false
-  gpu_node_locations   = ["europe-central2-b", "europe-central2-c"]
+  gpu_node_locations   = ["asia-southeast1-a", "asia-southeast1-b", "asia-southeast1-c"]
 
   artifact_bucket_location = var.artifact_bucket_location
   billing_account_id       = var.billing_account_id

@@ -4,12 +4,12 @@ variable "project_id" {
 
 variable "region" {
   type    = string
-  default = "europe-central2"
+  default = "asia-southeast1"
 }
 
 variable "zone" {
   type    = string
-  default = "europe-central2-c"
+  default = "asia-southeast1-a"
 }
 
 variable "admin_cidr" {
@@ -18,7 +18,7 @@ variable "admin_cidr" {
 
 variable "artifact_bucket_location" {
   type    = string
-  default = "EU"
+  default = "ASIA"
 }
 
 variable "billing_account_id" {
