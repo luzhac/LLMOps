@@ -1,6 +1,6 @@
 vllm:
   # Deliberately zero by default: no Pod means the GPU pool can scale to zero.
-  replicaCount: 1
+  replicaCount: 0
   image:
     repository: vllm/vllm-openai
     tag: v0.26.0
@@ -27,8 +27,12 @@ vllm:
     enabled: true
     size: 30Gi
     storageClassName: standard-rwo
+  # Must match the accelerator on the GPU node pool (infra .../production/main.tf
+  # gpu_accelerator_type). If these two drift apart, the autoscaler reports
+  # "node(s) didn't match Pod's node affinity/selector" and never even attempts
+  # a scale-up — which looks like a stockout but isn't.
   nodeSelector:
-    cloud.google.com/gke-accelerator: nvidia-tesla-t4
+    cloud.google.com/gke-accelerator: nvidia-l4
   tolerations:
     - key: nvidia.com/gpu
       operator: Equal

@@ -10,9 +10,9 @@ variable "region" {
 }
 
 variable "deployment_region" {
-  description = "The actual GCP region environments deploy into (e.g. europe-central2). Only used here to print the GCP_REGION value for GitHub Actions — bootstrap itself creates no resources in it."
+  description = "The actual GCP region environments deploy into. Only used here to print the GCP_REGION value for GitHub Actions — bootstrap itself creates no resources in it."
   type        = string
-  default     = "europe-central2"
+  default     = "asia-southeast1"
 }
 
 variable "github_repo" {
