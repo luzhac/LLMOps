@@ -1,0 +1,8 @@
+# Rename to backend.tf after running infra/bootstrap and getting the bucket
+# name from its `state_bucket_name` output.
+terraform {
+  backend "gcs" {
+    bucket = "replace-with-bootstrap-state-bucket-name"
+    prefix = "trade-balance-llm/dev"
+  }
+}

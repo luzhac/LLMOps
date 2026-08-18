@@ -1,0 +1,4 @@
+project_id         = "your-gcp-project-id"
+admin_cidr         = "YOUR_CURRENT_PUBLIC_IPV4/32"
+billing_account_id = "YOUR-BILLING-ACCOUNT-ID"
+budget_amount      = 30

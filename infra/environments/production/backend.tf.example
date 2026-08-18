@@ -1,0 +1,17 @@
+# Rename to backend.tf after running infra/bootstrap and getting the bucket
+# name from its `state_bucket_name` output.
+#
+# IMPORTANT: this environment mirrors the real, currently-running cluster
+# whose state today lives in ../../terraform/terraform.tfstate (local file).
+# Do NOT just `terraform init` this directory against a fresh backend — that
+# creates a second, empty state for resources that already exist, and the
+# next apply will try to create duplicates or fail on naming collisions.
+# Migrate the existing state first with `terraform state mv` (module.platform
+# prefix on every resource address), verified with a no-op `terraform plan`,
+# before switching this environment to be authoritative.
+terraform {
+  backend "gcs" {
+    bucket = "replace-with-bootstrap-state-bucket-name"
+    prefix = "trade-balance-llm/production"
+  }
+}

@@ -21,14 +21,16 @@ jobs:
       - run: ruff check app loadtest
       - run: pytest app/gateway/tests -q
 
-  terraform:
+  terraform-check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3
-      - run: terraform -chdir=infra/terraform fmt -check -recursive
-      - run: terraform -chdir=infra/terraform init -backend=false
-      - run: terraform -chdir=infra/terraform validate
+      - run: terraform fmt -check -recursive infra
+      - run: terraform -chdir=infra/bootstrap init -backend=false
+      - run: terraform -chdir=infra/bootstrap validate
+      - run: terraform -chdir=infra/environments/production init -backend=false
+      - run: terraform -chdir=infra/environments/production validate
 
   helm:
     runs-on: ubuntu-latest
@@ -38,3 +40,8 @@ jobs:
       - run: helm lint platform/helm/trade-balance-llm
       - run: helm template trade-balance-llm platform/helm/trade-balance-llm --namespace llm-platform >/dev/null
 
+  build-gateway-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t gateway:${{ github.sha }} app/gateway

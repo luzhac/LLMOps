@@ -1,0 +1,76 @@
+name: deploy
+
+# Fully manual — nothing here runs on push or PR. Trigger from the Actions tab
+# ("Run workflow"). terraform-apply additionally requires manual approval via
+# the `production` environment's required reviewers (Settings > Environments).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  terraform-plan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # required for GCP Workload Identity Federation
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+      - run: terraform -chdir=infra/environments/production init
+      - run: terraform -chdir=infra/environments/production validate
+      - run: terraform -chdir=infra/environments/production plan -out=tfplan
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: infra/environments/production/tfplan
+          retention-days: 5
+
+  terraform-apply:
+    needs: terraform-plan
+    runs-on: ubuntu-latest
+    environment: production # required reviewers must approve here before this job runs
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+      - run: terraform -chdir=infra/environments/production init
+      - uses: actions/download-artifact@v4
+        with:
+          name: tfplan
+          path: infra/environments/production
+      - run: terraform -chdir=infra/environments/production apply tfplan
+
+  push-gateway-image:
+    needs: terraform-apply
+    runs-on: ubuntu-latest
+    environment: production # same gate — image goes live only after infra is approved
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t gateway:${{ github.sha }} app/gateway
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - run: gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev --quiet
+      - run: |
+          IMAGE=${{ vars.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/trade-balance-llm/gateway
+          docker tag gateway:${{ github.sha }} "$IMAGE:${{ github.sha }}"
+          docker tag gateway:${{ github.sha }} "$IMAGE:latest"
+          docker push "$IMAGE:${{ github.sha }}"
+          docker push "$IMAGE:latest"
