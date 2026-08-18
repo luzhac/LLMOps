@@ -1,0 +1,41 @@
+# Second ArgoCD Application: lets ArgoCD deploy and manage the monitoring
+# stack too, instead of a manual `helm upgrade --install monitoring ...`.
+#
+# Multi-source Application: source 1 pulls the chart straight from the
+# prometheus-community Helm repo; source 2 is a git "ref" source that only
+# supplies files (values file + dashboard ConfigMap) — it is not rendered or
+# applied on its own, `$values` in source 1 and the third source's `directory`
+# filter both reference it.
+#
+# targetRevision for the chart is a placeholder — verify the real current
+# kube-prometheus-stack version with `helm search repo prometheus-community/kube-prometheus-stack`
+# before applying, and pin it exactly (ArgoCD Helm chart sources need an exact version here).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: monitoring
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://prometheus-community.github.io/helm-charts
+      chart: kube-prometheus-stack
+      targetRevision: "88.3.0"
+      helm:
+        valueFiles:
+          - $values/platform/monitoring/kube-prometheus-stack-values.yaml
+    - repoURL: https://github.com/luzhac/LLMOps.git
+      targetRevision: main
+      ref: values
+    - repoURL: https://github.com/luzhac/LLMOps.git
+      targetRevision: main
+      path: platform/monitoring
+      directory:
+        include: "dashboard-configmap.yaml"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [CreateNamespace=true]
+  revisionHistoryLimit: 5
