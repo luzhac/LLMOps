@@ -25,4 +25,14 @@ spec:
     automated: {prune: true, selfHeal: true}
     syncOptions: [CreateNamespace=true, PruneLast=true]
   revisionHistoryLimit: 5
+  # scripts/model-session.sh manually scales vllm's replicas for cost control
+  # (scale to 0 when idle). Without this, selfHeal would revert that scaling
+  # back to the Git-defined replicaCount on the next sync. Everything else
+  # about the Deployment stays fully enforced by GitOps.
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      name: vllm
+      jsonPointers:
+        - /spec/replicas
 

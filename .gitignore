@@ -3,6 +3,7 @@
 *.tfstate.*
 *.tfplan
 terraform.tfvars
+backend.tf
 .env
 .venv/
 __pycache__/
