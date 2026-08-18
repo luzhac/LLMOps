@@ -1,0 +1,9 @@
+# Rename to backend.tf only after creating the state bucket manually.
+# Never commit credentials or a local state file.
+terraform {
+  backend "gcs" {
+    bucket = "replace-with-terraform-state-bucket"
+    prefix = "trade-balance-llm/portfolio"
+  }
+}
+

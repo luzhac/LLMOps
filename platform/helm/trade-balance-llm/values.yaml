@@ -1,0 +1,73 @@
+vllm:
+  # Deliberately zero by default: no Pod means the GPU pool can scale to zero.
+  replicaCount: 0
+  image:
+    repository: vllm/vllm-openai
+    tag: v0.26.0
+    pullPolicy: IfNotPresent
+  model:
+    id: Qwen/Qwen3-8B-AWQ
+    servedName: Qwen/Qwen3-8B-AWQ
+    # Pin a tested model revision; update only through a measured rollout.
+    revision: cb7d6a337aadb4d2082ed0dcef1032e4f8645194
+    maxModelLen: 8192
+    maxNumSeqs: 8
+    gpuMemoryUtilization: "0.90"
+    quantization: awq
+  resources:
+    requests:
+      cpu: "4"
+      memory: 20Gi
+      nvidia.com/gpu: "1"
+    limits:
+      cpu: "7"
+      memory: 28Gi
+      nvidia.com/gpu: "1"
+  cache:
+    enabled: true
+    size: 30Gi
+    storageClassName: standard-rwo
+  nodeSelector:
+    cloud.google.com/gke-accelerator: nvidia-tesla-t4
+  tolerations:
+    - key: nvidia.com/gpu
+      operator: Equal
+      value: present
+      effect: NoSchedule
+
+gateway:
+  replicaCount: 1
+  image:
+    # Override with REGION-docker.pkg.dev/PROJECT/REPOSITORY/gateway.
+    repository: replace-me/gateway
+    tag: "0.1.0"
+    pullPolicy: IfNotPresent
+  existingSecret: llm-api-keys
+  apiKeySecretKey: gateway-api-key
+  maxConcurrentRequests: 8
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 2
+    targetCPUUtilizationPercentage: 70
+
+monitoring:
+  serviceMonitor:
+    enabled: true
+    interval: 15s
+  prometheusRule:
+    enabled: true
+
+networkPolicy:
+  enabled: true
+

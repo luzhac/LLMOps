@@ -1,0 +1,16 @@
+serviceMonitor:
+  enabled: true
+  interval: 15s
+# GKE reserves system-* PriorityClasses for namespaces covered by its own
+# scoped ResourceQuota. Do not use the chart's system-node-critical default.
+priorityClassName: ""
+nodeSelector:
+  cloud.google.com/gke-accelerator: nvidia-l4
+tolerations:
+  - key: nvidia.com/gpu
+    operator: Equal
+    value: present
+    effect: NoSchedule
+resources:
+  requests: {cpu: 50m, memory: 128Mi}
+  limits: {cpu: 200m, memory: 256Mi}

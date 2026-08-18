@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vllm
+  labels:
+    app.kubernetes.io/name: vllm
+    {{- include "trade-balance-llm.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.vllm.replicaCount }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vllm
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vllm
+        {{- include "trade-balance-llm.labels" . | nindent 8 }}
+    spec:
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 120
+      nodeSelector:
+        {{- toYaml .Values.vllm.nodeSelector | nindent 8 }}
+      tolerations:
+        {{- toYaml .Values.vllm.tolerations | nindent 8 }}
+      containers:
+        - name: vllm
+          image: "{{ .Values.vllm.image.repository }}:{{ .Values.vllm.image.tag }}"
+          imagePullPolicy: {{ .Values.vllm.image.pullPolicy }}
+          args:
+            - {{ .Values.vllm.model.id | quote }}
+            - --served-model-name
+            - {{ .Values.vllm.model.servedName | quote }}
+            - --revision
+            - {{ .Values.vllm.model.revision | quote }}
+            - --quantization
+            - {{ .Values.vllm.model.quantization | quote }}
+            - --max-model-len
+            - {{ .Values.vllm.model.maxModelLen | quote }}
+            - --max-num-seqs
+            - {{ .Values.vllm.model.maxNumSeqs | quote }}
+            - --gpu-memory-utilization
+            - {{ .Values.vllm.model.gpuMemoryUtilization | quote }}
+            - --enable-prefix-caching
+            - --no-enable-log-requests
+          env:
+            - name: HF_HOME
+              value: /model-cache
+          ports:
+            - name: http
+              containerPort: 8000
+          resources:
+            {{- toYaml .Values.vllm.resources | nindent 12 }}
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            failureThreshold: 180
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 3
+            failureThreshold: 3
+          volumeMounts:
+            - name: dshm
+              mountPath: /dev/shm
+            {{- if .Values.vllm.cache.enabled }}
+            - name: model-cache
+              mountPath: /model-cache
+            {{- end }}
+      volumes:
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 8Gi
+        {{- if .Values.vllm.cache.enabled }}
+        - name: model-cache
+          persistentVolumeClaim:
+            claimName: vllm-model-cache
+        {{- end }}
+

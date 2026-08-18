@@ -1,0 +1,11 @@
+project_id         = "your-gcp-project-id"
+admin_cidr         = "your-current-public-ipv4/32"
+region             = "europe-west4"
+zone               = "europe-west4-a"
+billing_account_id = "000000-000000-000000"
+budget_amount      = 30
+
+# Keep these cost-safety defaults for the first deployment.
+system_machine_type = "e2-standard-2"
+gpu_machine_type    = "g2-standard-8"
+gpu_spot            = true

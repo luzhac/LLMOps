@@ -1,0 +1,46 @@
+fullnameOverride: monitoring
+
+alertmanager:
+  enabled: false
+
+grafana:
+  enabled: true
+  defaultDashboardsEnabled: false
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      searchNamespace: ALL
+  resources:
+    requests: {cpu: 100m, memory: 192Mi}
+    limits: {cpu: 500m, memory: 512Mi}
+  nodeSelector: {workload: system}
+
+prometheus:
+  prometheusSpec:
+    retention: 2d
+    retentionSize: 4GB
+    serviceMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    resources:
+      requests: {cpu: 250m, memory: 768Mi}
+      limits: {cpu: "1", memory: 2Gi}
+    nodeSelector: {workload: system}
+
+prometheusOperator:
+  resources:
+    requests: {cpu: 50m, memory: 128Mi}
+    limits: {cpu: 250m, memory: 256Mi}
+  nodeSelector: {workload: system}
+
+kubeStateMetrics:
+  enabled: true
+nodeExporter:
+  enabled: true
+kubeControllerManager:
+  enabled: false
+kubeEtcd:
+  enabled: false
+kubeScheduler:
+  enabled: false
+

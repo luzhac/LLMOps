@@ -1,0 +1,7 @@
+apiVersion: v2
+name: trade-balance-llm
+description: Cost-bounded vLLM inference and API gateway on GKE
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+

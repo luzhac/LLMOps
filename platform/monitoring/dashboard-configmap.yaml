@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: llm-inference-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  llm-inference.json: |-
+    {
+      "annotations": {"list": []},
+      "editable": true,
+      "panels": [
+        {"title": "Gateway requests / second", "type": "timeseries", "targets": [{"expr": "sum(rate(llm_gateway_requests_total[5m]))", "legendFormat": "requests/s"}], "gridPos": {"h": 8, "w": 8, "x": 0, "y": 0}},
+        {"title": "Gateway p95 response-start latency", "type": "timeseries", "targets": [{"expr": "histogram_quantile(0.95, sum by (le) (rate(llm_gateway_request_duration_seconds_bucket[5m])))", "legendFormat": "p95 seconds"}], "gridPos": {"h": 8, "w": 8, "x": 8, "y": 0}},
+        {"title": "vLLM generation throughput", "type": "timeseries", "targets": [{"expr": "sum(rate(vllm:generation_tokens_total[5m]))", "legendFormat": "output tokens/s"}], "gridPos": {"h": 8, "w": 8, "x": 16, "y": 0}},
+        {"title": "vLLM TTFT p95", "type": "timeseries", "targets": [{"expr": "histogram_quantile(0.95, sum by (le) (rate(vllm:time_to_first_token_seconds_bucket[5m])))", "legendFormat": "TTFT p95 seconds"}], "gridPos": {"h": 8, "w": 8, "x": 0, "y": 8}},
+        {"title": "vLLM inter-token latency p95", "type": "timeseries", "targets": [{"expr": "histogram_quantile(0.95, sum by (le) (rate(vllm:inter_token_latency_seconds_bucket[5m])))", "legendFormat": "ITL p95 seconds"}], "gridPos": {"h": 8, "w": 8, "x": 8, "y": 8}},
+        {"title": "vLLM KV cache usage", "type": "timeseries", "targets": [{"expr": "avg(vllm:kv_cache_usage_perc) * 100", "legendFormat": "KV cache %"}], "gridPos": {"h": 8, "w": 8, "x": 16, "y": 8}},
+        {"title": "vLLM running requests", "type": "timeseries", "targets": [{"expr": "sum(vllm:num_requests_running)", "legendFormat": "running"}], "gridPos": {"h": 8, "w": 8, "x": 0, "y": 16}},
+        {"title": "vLLM waiting requests", "type": "timeseries", "targets": [{"expr": "sum(vllm:num_requests_waiting)", "legendFormat": "waiting"}], "gridPos": {"h": 8, "w": 8, "x": 8, "y": 16}},
+        {"title": "Gateway rejections / second", "type": "timeseries", "targets": [{"expr": "sum by (reason) (rate(llm_gateway_rejections_total[5m]))", "legendFormat": "{{reason}}"}], "gridPos": {"h": 8, "w": 8, "x": 16, "y": 16}}
+      ],
+      "schemaVersion": 39,
+      "tags": ["llm", "vllm", "gateway"],
+      "templating": {"list": []},
+      "time": {"from": "now-1h", "to": "now"},
+      "title": "Trade Balance LLM Inference",
+      "uid": "trade-balance-llm"
+    }

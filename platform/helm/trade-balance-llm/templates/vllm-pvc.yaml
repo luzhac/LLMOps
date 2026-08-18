@@ -1,0 +1,15 @@
+{{- if .Values.vllm.cache.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vllm-model-cache
+  labels:
+    {{- include "trade-balance-llm.labels" . | nindent 4 }}
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: {{ .Values.vllm.cache.storageClassName }}
+  resources:
+    requests:
+      storage: {{ .Values.vllm.cache.size }}
+{{- end }}
+

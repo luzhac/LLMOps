@@ -1,0 +1,36 @@
+{{- if .Values.monitoring.prometheusRule.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: llm-platform
+  labels:
+    release: monitoring
+spec:
+  groups:
+    - name: llm-platform
+      rules:
+        - alert: LLMGatewayHighErrorRate
+          expr: |
+            sum(rate(llm_gateway_requests_total{status=~"5.."}[5m]))
+            /
+            clamp_min(sum(rate(llm_gateway_requests_total[5m])), 0.001) > 0.05
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "LLM gateway 5xx rate is above 5%"
+        - alert: LLMGatewayConcurrencyRejected
+          expr: increase(llm_gateway_rejections_total{reason="concurrency_limit"}[10m]) > 5
+          labels:
+            severity: warning
+          annotations:
+            summary: "Gateway is rejecting requests at its concurrency limit"
+        - alert: VLLMNoMetricsWhileDesired
+          expr: kube_deployment_spec_replicas{deployment="vllm"} > 0 and absent(up{service="vllm"} == 1)
+          for: 15m
+          labels:
+            severity: critical
+          annotations:
+            summary: "vLLM is desired but Prometheus cannot scrape it"
+{{- end }}
+

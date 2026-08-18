@@ -1,0 +1,28 @@
+# Replace repoURL and gateway image values before applying.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: trade-balance-llm
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/luzhac/LLMOps.git
+    targetRevision: main
+    path: platform/helm/trade-balance-llm
+    helm:
+      values: |
+        vllm:
+          replicaCount: 0
+        gateway:
+          image:
+            repository: CHANGEME_REGION-docker.pkg.dev/CHANGEME_PROJECT/trade-balance-llm/gateway
+            tag: "0.1.0"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: llm-platform
+  syncPolicy:
+    automated: {prune: true, selfHeal: true}
+    syncOptions: [CreateNamespace=true, PruneLast=true]
+  revisionHistoryLimit: 5
+
