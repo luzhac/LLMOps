@@ -11,7 +11,7 @@ vllm:
     # Pin a tested model revision; update only through a measured rollout.
     revision: cb7d6a337aadb4d2082ed0dcef1032e4f8645194
     maxModelLen: 8192
-    maxNumSeqs: 8
+    maxNumSeqs: 32
     gpuMemoryUtilization: "0.90"
     quantization: awq
   resources:
@@ -48,7 +48,7 @@ gateway:
     pullPolicy: IfNotPresent
   existingSecret: llm-api-keys
   apiKeySecretKey: gateway-api-key
-  maxConcurrentRequests: 8
+  maxConcurrentRequests: 32
   service:
     type: ClusterIP
     port: 8080
