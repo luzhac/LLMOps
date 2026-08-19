@@ -15,6 +15,13 @@ jobs:
     permissions:
       contents: read
       id-token: write # required for GCP Workload Identity Federation
+    # terraform.tfvars is gitignored (it holds the real project ID and admin IP),
+    # so CI must supply the no-default variables itself. TF_VAR_<name> is
+    # Terraform's env-var convention for this.
+    env:
+      TF_VAR_project_id: ${{ secrets.GCP_PROJECT_ID }}
+      TF_VAR_admin_cidr: ${{ secrets.GCP_ADMIN_CIDR }}
+      TF_VAR_billing_account_id: ${{ secrets.GCP_BILLING_ACCOUNT_ID }}
     steps:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3
@@ -22,9 +29,11 @@ jobs:
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
-      - run: terraform -chdir=infra/environments/production init
+      # -input=false makes a missing variable fail immediately instead of
+      # hanging on an interactive prompt no one can answer.
+      - run: terraform -chdir=infra/environments/production init -input=false
       - run: terraform -chdir=infra/environments/production validate
-      - run: terraform -chdir=infra/environments/production plan -out=tfplan
+      - run: terraform -chdir=infra/environments/production plan -input=false -out=tfplan
       - uses: actions/upload-artifact@v4
         with:
           name: tfplan
@@ -38,6 +47,10 @@ jobs:
     permissions:
       contents: read
       id-token: write
+    env:
+      TF_VAR_project_id: ${{ secrets.GCP_PROJECT_ID }}
+      TF_VAR_admin_cidr: ${{ secrets.GCP_ADMIN_CIDR }}
+      TF_VAR_billing_account_id: ${{ secrets.GCP_BILLING_ACCOUNT_ID }}
     steps:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3
@@ -45,12 +58,12 @@ jobs:
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
-      - run: terraform -chdir=infra/environments/production init
+      - run: terraform -chdir=infra/environments/production init -input=false
       - uses: actions/download-artifact@v4
         with:
           name: tfplan
           path: infra/environments/production
-      - run: terraform -chdir=infra/environments/production apply tfplan
+      - run: terraform -chdir=infra/environments/production apply -input=false tfplan
 
   push-gateway-image:
     needs: terraform-apply
