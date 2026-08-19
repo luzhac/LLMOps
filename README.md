@@ -92,84 +92,45 @@ below 1% and cannot be recovered on this hardware.
 
 ## How the operating parameters were derived
 
-The serving limits in this repo are not defaults and are not guesses. Each one comes from a
-measured quantity, and the chain is reproducible for any other model or GPU.
+The serving limits here are calculated, not defaults. KV cache cost per token follows from the
+model's architecture — **144 KB/token** for this one, a quarter of the naive figure because it uses
+grouped-query attention — which turns vLLM's 12.85 GiB pool into a capacity of **93,584 tokens**.
+That result matches vLLM's own startup log, so the same arithmetic transfers to any other model or
+card.
 
-**Step 1 — cost of one token, from architecture.** KV cache per token depends only on the model:
-
-```
-2 × layers × KV heads × head_dim × bytes_per_value
-2 × 36     × 8        × 128      × 2                = 147,456 bytes = 144 KB/token
-```
-
-It is **KV heads (8), not attention heads (32)** — this model uses grouped-query attention, so its
-KV cache is a quarter of what a naive reading gives. Getting this wrong overestimates capacity 4x.
-
-**Step 2 — how many tokens fit.** vLLM reports its KV pool at startup: 12.85 GiB.
-
-```
-12.85 GiB ÷ 144 KB = 93,594 tokens      (vLLM's own log says 93,584 — the formula checks out)
-```
-
-**Step 3 — turn tokens into concurrency.** The measured workload averages ~374 tokens per request
-(short prompt, 256 output tokens):
-
-```
-93,584 ÷ 374 ≈ 250 concurrent requests, if memory were the only constraint
-```
-
-**Step 4 — load test against the SLO.** The limit turned out to be **125**, not 250 — set by
-inter-token latency approaching its 100 ms objective, at which point KV cache sat at only **50%**.
-Memory was not what ran out.
-
-**Step 5 — set the limits from the measured number.** `maxNumSeqs` is set deliberately *above* both
-figures (512) so that vLLM's scheduler is bounded by memory and bandwidth rather than by an
-arbitrary cap, and the gateway's concurrency limit is the real admission control. A `maxNumSeqs`
-below the achievable concurrency silently caps throughput and looks like a hardware limit.
+At ~374 tokens per request the pool would allow ~250 concurrent requests. Load testing found the
+real limit at **125**, set by inter-token latency reaching its 100 ms objective while KV cache sat
+at only 50%. Memory was not what ran out — bandwidth was. `maxNumSeqs` is therefore set *above*
+both figures (512), so the scheduler is bounded by hardware rather than by an arbitrary cap, and
+the gateway's concurrency limit does the actual admission control.
 
 ### What is actually the bottleneck: memory bandwidth
 
-Decode must read **every model weight from VRAM to generate every single token**. That gives a hard
-floor independent of how fast the GPU can compute:
+Decode must read **every model weight from VRAM to produce every single token**, which sets a floor
+no amount of compute can lower:
 
 ```
-6.14 GB of weights ÷ 300 GB/s of L4 bandwidth = 20.5 ms per token
+6.14 GB of weights / 300 GB/s of L4 bandwidth = 20.5 ms per token   (measured: 20.4 ms)
 ```
 
-Measured inter-token latency at low concurrency: **20.4 ms.** Theory and measurement agree, which
-means decode is running at essentially 100% of the card's memory bandwidth.
+Theory and measurement agree, so decode runs at essentially 100% of the card's memory bandwidth.
+Arithmetic over the same step takes 0.13 ms — **the GPU spends over 99% of decode time waiting on
+memory.** (`utilization.gpu` reads near 100% throughout; it counts "a kernel is resident", not
+"arithmetic units are busy", and is misleading here.)
 
-Compute, over the same step, is idle:
+Under load the constraint stays in memory but shifts. Weights are read once per step regardless of
+batch size, while KV cache is read per sequence, so at 125 concurrent the per-step traffic roughly
+doubles (6.14 GB to ~13 GB) and inter-token latency degrades from 20.4 ms to 84 ms. That is about
+2x worse than the memory model alone predicts; the remainder is attention score computation,
+scheduling overhead, and padding waste from ragged batches.
 
-```
-2 × 8e9 params × batch 1 = 16 GFLOP ÷ 121 TFLOPS = 0.13 ms
-```
+**The crossover is ~750 tokens per request.** Below it bandwidth saturates while memory sits idle —
+this workload's case. Above it memory fills first. That number decides whether the next capacity
+problem needs a bigger card or a faster one.
 
-**The GPU spends over 99% of decode time waiting on memory.** (Note that `utilization.gpu` reads
-near 100% throughout — that metric counts "a kernel is resident", not "arithmetic units are busy",
-and is misleading here.)
-
-Under load the bottleneck stays in memory but changes shape. Weights are read once per step no
-matter the batch size, but KV cache must be read per sequence:
-
-| | concurrency 8 | concurrency 125 |
-|---|---|---|
-| Weight traffic per step | 6.14 GB | 6.14 GB (unchanged) |
-| KV cache traffic per step | ~0.4 GB | **~6.9 GB** |
-| Predicted inter-token latency | 22 ms | 43 ms |
-| **Measured** | **20.4 ms** | **84 ms** |
-
-The low-concurrency prediction is near exact. The high-concurrency case is about 2x worse than the
-memory model alone predicts — the remainder is attention score computation (which scales with
-batch × context and reads no weights), scheduling overhead, and padding waste from ragged batches.
-
-**The crossover is ~750 tokens per request.** Below it, bandwidth saturates while memory sits idle
-— this workload's case. Above it, memory fills first. That single number determines whether the
-next capacity problem is solved by a bigger card or a faster one.
-
-**Consequences for tuning:** larger batches and more aggressive quantisation help; a GPU with more
-compute would not. Meaningfully more throughput requires more memory bandwidth — an A100 (HBM2e,
-1,555 GB/s) or H100 (HBM3, 3,350 GB/s) rather than the L4's GDDR6.
+**Consequences for tuning:** larger batches and more aggressive quantisation help; more compute
+would not. Meaningfully more throughput needs more bandwidth — an A100 (HBM2e, 1,555 GB/s) or H100
+(HBM3, 3,350 GB/s) rather than the L4's GDDR6.
 
 ## What's in this repo
 
