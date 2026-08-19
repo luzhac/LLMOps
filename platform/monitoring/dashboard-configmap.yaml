@@ -143,10 +143,12 @@ data:
             "defaults": {
               "unit": "percent",
               "min": 0,
-              "max": 100
+              "custom": {
+                "axisSoftMax": 10
+              }
             }
           },
-          "description": "Share of the pre-allocated KV cache pool in use. The axis is pinned to 0-100% so that idle genuinely looks idle: measured peak under a concurrency-8 load was about 2%, i.e. the bottleneck is max_num_seqs, not GPU memory. Approaching 100% means requests start queueing and being preempted."
+          "description": "Share of the pre-allocated KV cache pool in use. Axis autoscales above a soft ceiling of 10% because real utilisation here is small: a concurrency-16 run with max_tokens=256 only needs about 16*272/93584 = 4.6%, so a fixed 0-100% axis renders it as a flat line at zero. Note also that Prometheus scrapes every 30s while a burst lasts ~15s, so short runs can be missed entirely - a 0 reading does not prove the cache was unused. The operational signal is that this stays low while throughput scales, i.e. max_num_seqs is the binding limit, not GPU memory."
         },
         {
           "title": "vLLM requests running",
