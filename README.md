@@ -104,6 +104,29 @@ at only 50%. Memory was not what ran out — bandwidth was. `maxNumSeqs` is ther
 both figures (512), so the scheduler is bounded by hardware rather than by an arbitrary cap, and
 the gateway's concurrency limit does the actual admission control.
 
+### The hardware these numbers come from
+
+| NVIDIA L4 (Ada Lovelace) | |
+|---|---|
+| VRAM | **24 GB** GDDR6 (the only configuration L4 ships in) |
+| Memory bandwidth | **300 GB/s** |
+| FP16/BF16 Tensor Core, dense | **121 TFLOPS** |
+| FP32 | 30.3 TFLOPS |
+| Max power | 72 W |
+| Form factor | single-slot low-profile, PCIe Gen4 x16 |
+| GCP machine type | `g2-standard-8` — 8 vCPU, 32 GB host RAM, 1x L4 |
+
+**On the 121 vs 242 TFLOPS discrepancy:** NVIDIA's datasheet headlines 242 TFLOPS for FP16, with
+the footnote *"Shown with sparsity. Specifications are one-half lower without sparsity."*
+Structured 2:4 sparsity is not used by this model or by vLLM's AWQ kernels, so the applicable
+figure is the dense **121 TFLOPS** — and as shown below, even that goes almost entirely unused.
+
+**Why this card.** 24 GB is enough to hold an 8B AWQ checkpoint plus a KV pool large enough to
+matter (12.85 GiB of it). At 72 W single-slot it is the cheapest GPU on GCP that can host this
+model at all. Its Ada-generation tensor cores also handle 4-bit dequantisation far better than the
+previous generation — the T4 comparison further down shows a card with *higher* rated bandwidth
+running 36% slower on this workload.
+
 ### What is actually the bottleneck: memory bandwidth
 
 Decode must read **every model weight from VRAM to produce every single token**, which sets a floor
