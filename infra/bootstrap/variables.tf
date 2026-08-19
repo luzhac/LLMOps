@@ -26,6 +26,30 @@ variable "state_bucket_name" {
   type        = string
 }
 
+variable "cluster_name" {
+  description = "Only used to name the billing budget so it is recognisable in the console."
+  type        = string
+  default     = "trade-balance-llm"
+}
+
+variable "billing_account_id" {
+  description = "Billing account ID used only for budget creation. Leave null to skip the budget resource."
+  type        = string
+  default     = null
+  nullable    = true
+}
+
+variable "budget_amount" {
+  description = "Alerting threshold in the billing account's own currency; not a hard spending cap."
+  type        = number
+  default     = 30
+
+  validation {
+    condition     = var.budget_amount > 0
+    error_message = "budget_amount must be greater than zero."
+  }
+}
+
 variable "labels" {
   type = map(string)
   default = {

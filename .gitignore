@@ -3,7 +3,9 @@
 *.tfstate.*
 *.tfplan
 terraform.tfvars
-backend.tf
+# backend.tf is now a partial config (no bucket name) and IS committed, so CI
+# can find the same remote state. The real bucket name goes in backend.hcl.
+backend.hcl
 .env
 .venv/
 __pycache__/

@@ -21,13 +21,5 @@ variable "artifact_bucket_location" {
   default = "ASIA"
 }
 
-variable "billing_account_id" {
-  type     = string
-  default  = null
-  nullable = true
-}
-
-variable "budget_amount" {
-  type    = number
-  default = 30
-}
+# The billing budget moved to infra/bootstrap so CI never needs billing-account
+# permissions. TF_VAR_billing_account_id in CI is now harmless but unused.

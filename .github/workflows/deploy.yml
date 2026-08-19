@@ -31,7 +31,13 @@ jobs:
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
       # -input=false makes a missing variable fail immediately instead of
       # hanging on an interactive prompt no one can answer.
-      - run: terraform -chdir=infra/environments/production init -input=false
+      # backend.tf is a partial config on purpose (no bucket name in git), so the
+      # bucket must be supplied here. Without it Terraform silently falls back to
+      # an empty LOCAL state and tries to re-create infrastructure that already exists.
+      - run: |
+          terraform -chdir=infra/environments/production init -input=false \
+            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+            -backend-config="prefix=trade-balance-llm/production"
       - run: terraform -chdir=infra/environments/production validate
       - run: terraform -chdir=infra/environments/production plan -input=false -out=tfplan
       - uses: actions/upload-artifact@v4
@@ -58,7 +64,13 @@ jobs:
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
-      - run: terraform -chdir=infra/environments/production init -input=false
+      # backend.tf is a partial config on purpose (no bucket name in git), so the
+      # bucket must be supplied here. Without it Terraform silently falls back to
+      # an empty LOCAL state and tries to re-create infrastructure that already exists.
+      - run: |
+          terraform -chdir=infra/environments/production init -input=false \
+            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+            -backend-config="prefix=trade-balance-llm/production"
       - uses: actions/download-artifact@v4
         with:
           name: tfplan

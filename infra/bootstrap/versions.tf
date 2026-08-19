@@ -16,4 +16,11 @@ terraform {
 provider "google" {
   project = var.project_id
   region  = var.region
+
+  # billingbudgets.googleapis.com rejects plain user Application Default
+  # Credentials with "requires a quota project, which is not set by default".
+  # These two settings bill the API call to this project and are what make the
+  # budget resource work — environments/production already had them.
+  billing_project       = var.project_id
+  user_project_override = true
 }

@@ -18,8 +18,6 @@ module "platform" {
   gpu_node_locations   = ["asia-southeast1-a", "asia-southeast1-b", "asia-southeast1-c"]
 
   artifact_bucket_location = var.artifact_bucket_location
-  billing_account_id       = var.billing_account_id
-  budget_amount            = var.budget_amount
 
   labels = {
     application = "trade-balance-llm"

@@ -1,0 +1,6 @@
+# Copy to backend.hcl (gitignored) and fill in the real state bucket name,
+# which is the `state_bucket_name` output of infra/bootstrap.
+#
+#   terraform init -backend-config=backend.hcl
+bucket = "REPLACE_WITH_BOOTSTRAP_STATE_BUCKET"
+prefix = "trade-balance-llm/production"

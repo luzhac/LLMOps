@@ -101,23 +101,9 @@ variable "artifact_bucket_location" {
   default = "EU"
 }
 
-variable "billing_account_id" {
-  description = "Billing account ID used only for budget creation. Leave null to skip the budget resource."
-  type        = string
-  default     = null
-  nullable    = true
-}
-
-variable "budget_amount" {
-  description = "Alerting threshold in the billing account's own currency; not a hard spending cap."
-  type        = number
-  default     = 30
-
-  validation {
-    condition     = var.budget_amount > 0
-    error_message = "budget_amount must be greater than zero."
-  }
-}
+# billing_account_id / budget_amount deliberately live in infra/bootstrap, not
+# here. The budget is a set-once resource and keeping it out of this module
+# means the CI service account needs no billing-account-level permission.
 
 variable "labels" {
   type = map(string)
