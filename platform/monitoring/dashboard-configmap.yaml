@@ -4,27 +4,234 @@ metadata:
   name: llm-inference-dashboard
   namespace: monitoring
   labels:
-    grafana_dashboard: "1"
+    grafana_dashboard: '1'
 data:
   llm-inference.json: |-
     {
-      "annotations": {"list": []},
+      "annotations": {
+        "list": []
+      },
       "editable": true,
       "panels": [
-        {"title": "Gateway requests / second", "type": "timeseries", "targets": [{"expr": "sum(rate(llm_gateway_requests_total[5m]))", "legendFormat": "requests/s"}], "gridPos": {"h": 8, "w": 8, "x": 0, "y": 0}},
-        {"title": "Gateway p95 response-start latency", "type": "timeseries", "targets": [{"expr": "histogram_quantile(0.95, sum by (le) (rate(llm_gateway_request_duration_seconds_bucket[5m])))", "legendFormat": "p95 seconds"}], "gridPos": {"h": 8, "w": 8, "x": 8, "y": 0}},
-        {"title": "vLLM generation throughput", "type": "timeseries", "targets": [{"expr": "sum(rate(vllm:generation_tokens_total[5m]))", "legendFormat": "output tokens/s"}], "gridPos": {"h": 8, "w": 8, "x": 16, "y": 0}},
-        {"title": "vLLM TTFT p95", "type": "timeseries", "targets": [{"expr": "histogram_quantile(0.95, sum by (le) (rate(vllm:time_to_first_token_seconds_bucket[5m])))", "legendFormat": "TTFT p95 seconds"}], "gridPos": {"h": 8, "w": 8, "x": 0, "y": 8}},
-        {"title": "vLLM inter-token latency p95", "type": "timeseries", "targets": [{"expr": "histogram_quantile(0.95, sum by (le) (rate(vllm:inter_token_latency_seconds_bucket[5m])))", "legendFormat": "ITL p95 seconds"}], "gridPos": {"h": 8, "w": 8, "x": 8, "y": 8}},
-        {"title": "vLLM KV cache usage", "type": "timeseries", "targets": [{"expr": "avg(vllm:kv_cache_usage_perc) * 100", "legendFormat": "KV cache %"}], "gridPos": {"h": 8, "w": 8, "x": 16, "y": 8}},
-        {"title": "vLLM running requests", "type": "timeseries", "targets": [{"expr": "sum(vllm:num_requests_running)", "legendFormat": "running"}], "gridPos": {"h": 8, "w": 8, "x": 0, "y": 16}},
-        {"title": "vLLM waiting requests", "type": "timeseries", "targets": [{"expr": "sum(vllm:num_requests_waiting)", "legendFormat": "waiting"}], "gridPos": {"h": 8, "w": 8, "x": 8, "y": 16}},
-        {"title": "Gateway rejections / second", "type": "timeseries", "targets": [{"expr": "sum by (reason) (rate(llm_gateway_rejections_total[5m]))", "legendFormat": "{{reason}}"}], "gridPos": {"h": 8, "w": 8, "x": 16, "y": 16}}
+        {
+          "title": "Gateway request rate",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "sum(rate(llm_gateway_requests_total[5m]))",
+              "legendFormat": "requests/s"
+            }
+          ],
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 0,
+            "y": 0
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "min": 0
+            }
+          }
+        },
+        {
+          "title": "Gateway p95 request duration (unreliable for streaming)",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum by (le) (rate(llm_gateway_request_duration_seconds_bucket[5m])))",
+              "legendFormat": "p95 seconds"
+            }
+          ],
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 8,
+            "y": 0
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "min": 0
+            }
+          },
+          "description": "Backed by llm_gateway_request_duration_seconds, which is TOTAL request duration, not time-to-first-byte despite what the old panel title claimed. For streaming responses the FastAPI middleware boundary can complete before the last SSE token, so do not use this as a streaming latency figure. Use the vLLM TTFT and inter-token latency panels instead."
+        },
+        {
+          "title": "vLLM output token rate",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "sum(rate(vllm:generation_tokens_total[5m]))",
+              "legendFormat": "output tokens/s"
+            }
+          ],
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 16,
+            "y": 0
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "min": 0
+            }
+          }
+        },
+        {
+          "title": "vLLM p95 time to first token",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum by (le) (rate(vllm:time_to_first_token_seconds_bucket[5m])))",
+              "legendFormat": "TTFT p95 seconds"
+            }
+          ],
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 0,
+            "y": 8
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "min": 0
+            }
+          }
+        },
+        {
+          "title": "vLLM p95 inter-token latency",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum by (le) (rate(vllm:inter_token_latency_seconds_bucket[5m])))",
+              "legendFormat": "ITL p95 seconds"
+            }
+          ],
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 8,
+            "y": 8
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "min": 0
+            }
+          }
+        },
+        {
+          "title": "vLLM KV cache utilisation",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "avg(vllm:kv_cache_usage_perc) * 100",
+              "legendFormat": "KV cache %"
+            }
+          ],
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 16,
+            "y": 8
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "min": 0,
+              "max": 100
+            }
+          },
+          "description": "Share of the pre-allocated KV cache pool in use. The axis is pinned to 0-100% so that idle genuinely looks idle: measured peak under a concurrency-8 load was about 2%, i.e. the bottleneck is max_num_seqs, not GPU memory. Approaching 100% means requests start queueing and being preempted."
+        },
+        {
+          "title": "vLLM requests running",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "sum(vllm:num_requests_running)",
+              "legendFormat": "running"
+            }
+          ],
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 0,
+            "y": 16
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "min": 0
+            }
+          }
+        },
+        {
+          "title": "vLLM requests queued",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "sum(vllm:num_requests_waiting)",
+              "legendFormat": "waiting"
+            }
+          ],
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 8,
+            "y": 16
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "min": 0,
+              "max": 10
+            }
+          },
+          "description": "Sustained values above 0 mean the engine is saturated and cannot admit arriving requests immediately. Axis is pinned to 0-10 so an empty panel does not auto-scale to a misleading range."
+        },
+        {
+          "title": "Gateway rejection rate",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "sum by (reason) (rate(llm_gateway_rejections_total[5m]))",
+              "legendFormat": "{{reason}}"
+            }
+          ],
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 16,
+            "y": 16
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "min": 0,
+              "max": 5
+            }
+          },
+          "description": "429s from the gateway concurrency limit, or 401s from failed auth. Non-zero under load means traffic exceeded gateway.maxConcurrentRequests. Axis pinned to 0-5 for the same reason."
+        }
       ],
       "schemaVersion": 39,
-      "tags": ["llm", "vllm", "gateway"],
-      "templating": {"list": []},
-      "time": {"from": "now-1h", "to": "now"},
+      "tags": [
+        "llm",
+        "vllm",
+        "gateway"
+      ],
+      "templating": {
+        "list": []
+      },
+      "time": {
+        "from": "now-1h",
+        "to": "now"
+      },
       "title": "Trade Balance LLM Inference",
       "uid": "trade-balance-llm"
     }
