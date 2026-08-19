@@ -1,6 +1,6 @@
 vllm:
   # Deliberately zero by default: no Pod means the GPU pool can scale to zero.
-  replicaCount: 0
+  replicaCount: 1
   image:
     repository: vllm/vllm-openai
     tag: v0.26.0
