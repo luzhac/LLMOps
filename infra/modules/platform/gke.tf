@@ -159,6 +159,18 @@ resource "google_container_node_pool" "gpu" {
     oauth_scopes    = ["https://www.googleapis.com/auth/cloud-platform"]
     labels          = merge(var.labels, { workload = "gpu-inference" })
 
+    # Image Streaming: start the container before the image finishes pulling and
+    # lazily fetch files as they are actually read. The vLLM image is ~10GB and
+    # most of it (CUDA libs, build toolchain) is never touched at runtime.
+    # Measured 2026-08-19 without it: image pull took 3m17s of a 7m35s cold start
+    # — the single largest phase, bigger than model load (38s) and torch.compile (42s).
+    # Requires: COS_CONTAINERD, GKE >= 1.30.1-gke.1329000, containerfilesystem.googleapis.com
+    # enabled, and Private Google Access on the subnet for private nodes. Works with
+    # Docker Hub images, not only Artifact Registry.
+    gcfs_config {
+      enabled = true
+    }
+
     guest_accelerator {
       type  = var.gpu_accelerator_type
       count = 1

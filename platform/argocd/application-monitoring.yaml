@@ -37,5 +37,14 @@ spec:
     namespace: monitoring
   syncPolicy:
     automated: { prune: true, selfHeal: true }
-    syncOptions: [CreateNamespace=true]
+    syncOptions:
+      - CreateNamespace=true
+      # kube-prometheus-stack's CRDs (prometheuses, alertmanagers, scrapeconfigs,
+      # ...) each exceed 256KB. Client-side apply stores the whole manifest in the
+      # last-applied-configuration annotation and Kubernetes rejects it with
+      # "metadata.annotations: Too long: may not be more than 262144 bytes", so
+      # those CRDs never install, the Prometheus CR can't be created, and every
+      # dashboard silently shows no data. Server-side apply doesn't write that
+      # annotation and is the supported fix.
+      - ServerSideApply=true
   revisionHistoryLimit: 5
